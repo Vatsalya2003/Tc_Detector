@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tc-detector.local/schemas/label.schema.json",
+  "title": "Label",
+  "description": "One human judgment about whether a Technical Credit is present at one place in a repo. DRAFT: needs team sign-off. Fields shared with candidates point at candidate.schema.json, so their names, types and allowed values can never drift apart. This file matches src/tc_detector/contracts/label.py. The Python code also checks what JSON Schema can't: that label_id was built from the other fields, and that one repo's label file has one repo, one commit and no duplicate ids. See ground_truth/LABEL_FORMAT.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "label_id", "repo", "commit", "service", "file", "line_start", "line_end",
+    "unit", "pattern", "category", "is_tc", "labeller", "second_labeller",
+    "second_is_tc", "adjudicated_by", "notes"
+  ],
+  "$defs": {
+    "labeller": {
+      "description": "One of the four team members, by their letter in the plan.",
+      "enum": ["A", "B", "C", "D"]
+    },
+    "optional_labeller": {
+      "description": "A team member's letter, or null when nobody fills this role.",
+      "enum": ["A", "B", "C", "D", null]
+    }
+  },
+  "properties": {
+    "label_id": {
+      "$ref": "candidate.schema.json#/properties/id",
+      "description": "PROPOSAL. Unique name for this label, built exactly like a candidate id (repo:service:file:location:pattern), so evaluation can say which label matched which candidate."
+    },
+    "repo": {
+      "$ref": "candidate.schema.json#/properties/repo",
+      "description": "Which target repo. Must be the 'name' of that repo in targets.yaml (needs team sign-off)."
+    },
+    "commit": { "$ref": "candidate.schema.json#/properties/commit" },
+    "service": { "$ref": "candidate.schema.json#/properties/service" },
+    "file": { "$ref": "candidate.schema.json#/properties/file" },
+    "line_start": { "$ref": "candidate.schema.json#/properties/line_start" },
+    "line_end": { "$ref": "candidate.schema.json#/properties/line_end" },
+    "unit": { "$ref": "candidate.schema.json#/properties/unit" },
+    "pattern": { "$ref": "candidate.schema.json#/properties/pattern" },
+    "category": { "$ref": "candidate.schema.json#/properties/category" },
+    "is_tc": {
+      "description": "The final verdict that evaluation scores: true = this credit is present, false = judged absent. After a disagreement this is the settled answer.",
+      "type": "boolean"
+    },
+    "labeller": {
+      "$ref": "#/$defs/labeller",
+      "description": "Who made the first judgment."
+    },
+    "second_labeller": {
+      "$ref": "#/$defs/optional_labeller",
+      "description": "Who labelled it a second time, for the 20% agreement sample; null if not in the sample. Never the same person as labeller."
+    },
+    "second_is_tc": {
+      "description": "PROPOSAL. The second labeller's own verdict, needed for Cohen's kappa. Set exactly when second_labeller is set.",
+      "type": ["boolean", "null"]
+    },
+    "adjudicated_by": {
+      "$ref": "#/$defs/optional_labeller",
+      "description": "PROPOSAL. Who settled a disagreement between the two labellers (either of them, or anyone else). Null when there was no disagreement."
+    },
+    "notes": {
+      "description": "Free-text reason for the verdict; may be empty.",
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "description": "Copied from candidate.schema.json (a $ref can't reuse another schema's allOf): a line_range label needs a file and both line numbers; any other unit must have null line numbers.",
+      "if": { "properties": { "unit": { "const": "line_range" } } },
+      "then": {
+        "properties": {
+          "file": { "type": "string" },
+          "line_start": { "type": "integer" },
+          "line_end": { "type": "integer" }
+        }
+      },
+      "else": {
+        "properties": { "line_start": { "type": "null" }, "line_end": { "type": "null" } }
+      }
+    },
+    {
+      "description": "Copied from candidate.schema.json: a file label must say which file.",
+      "if": { "properties": { "unit": { "const": "file" } } },
+      "then": { "properties": { "file": { "type": "string" } } }
+    },
+    {
+      "description": "second_labeller and second_is_tc are both null, or both set.",
+      "if": { "properties": { "second_labeller": { "const": null } } },
+      "then": { "properties": { "second_is_tc": { "type": "null" } } },
+      "else": { "properties": { "second_is_tc": { "type": "boolean" } } }
+    },
+    {
+      "description": "Only a label with two labellers can have a disagreement to settle.",
+      "if": { "properties": { "adjudicated_by": { "type": "string" } } },
+      "then": { "properties": { "second_labeller": { "type": "string" } } }
+    },
+    {
+      "description": "This block and the next: with two labellers and no adjudicator, they agreed, so second_is_tc must equal is_tc.",
+      "if": {
+        "properties": {
+          "second_labeller": { "type": "string" },
+          "adjudicated_by": { "const": null },
+          "is_tc": { "const": true }
+        }
+      },
+      "then": { "properties": { "second_is_tc": { "const": true } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "second_labeller": { "type": "string" },
+          "adjudicated_by": { "const": null },
+          "is_tc": { "const": false }
+        }
+      },
+      "then": { "properties": { "second_is_tc": { "const": false } } }
+    },
+    {
+      "description": "This block and the three after it (one per team member): nobody can be their own second labeller.",
+      "if": { "properties": { "labeller": { "const": "A" } } },
+      "then": { "properties": { "second_labeller": { "not": { "const": "A" } } } }
+    },
+    {
+      "if": { "properties": { "labeller": { "const": "B" } } },
+      "then": { "properties": { "second_labeller": { "not": { "const": "B" } } } }
+    },
+    {
+      "if": { "properties": { "labeller": { "const": "C" } } },
+      "then": { "properties": { "second_labeller": { "not": { "const": "C" } } } }
+    },
+    {
+      "if": { "properties": { "labeller": { "const": "D" } } },
+      "then": { "properties": { "second_labeller": { "not": { "const": "D" } } } }
+    }
+  ]
+}
