@@ -1,8 +1,28 @@
+.DS_Store
+
+# Secrets: the API key lives here and is shared by direct message only
 .env
-.venv/
+.env.*
+!.env.example
+
+# Local Claude response cache
+.tc_cache/
+
+# Target repos are cloned by script
+targets/
+
+# Python
 __pycache__/
+*.py[cod]
 *.pyc
+.venv/
 .pytest_cache/
 .ruff_cache/
-targets/
-.DS_Store
+dist/
+build/
+*.egg-info/
+
+# Dev-set material that would bias labellers: keep private until labels freeze (Nov 20 / Nov 25)
+local/
+# Per-machine log of every Claude call; it names candidate ids, so it is not shared before the freeze
+results/cost_log.jsonl
