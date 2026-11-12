@@ -21,6 +21,8 @@ dependencies = [
 # Creates the `tc-detect` command, which runs main() in src/tc_detector/cli.py.
 [project.scripts]
 tc-detect = "tc_detector.cli:main"
+tc-attribute = "tc_detector.llm.cli:main"
+tc-rules-resilience = "tc_detector.rules.resilience.cli:main"
 
 # How the package gets built and installed (uv's own build tool).
 [build-system]
@@ -34,6 +36,9 @@ dev = [
     "pytest>=9.2.0",  # runs the tests
     "ruff>=0.17.4",   # lints and formats the code
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 # Ruff settings live here so ruff behaves the same on every laptop and in CI.
 [tool.ruff]
