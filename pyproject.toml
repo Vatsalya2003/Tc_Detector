@@ -30,6 +30,7 @@ build-backend = "uv_build"
 # Tools only developers need; installed by `uv sync`, not shipped to users.
 [dependency-groups]
 dev = [
+    "jsonschema>=4.26.0",  # checks the label schema in tests
     "pytest>=9.2.0",  # runs the tests
     "ruff>=0.17.4",   # lints and formats the code
 ]
