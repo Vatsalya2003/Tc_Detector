@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from tc-detector!")
+"""TC Detector: finds Technical Credit candidates in Java microservice repos."""

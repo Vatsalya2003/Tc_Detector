@@ -1,30 +1,45 @@
+# Project settings: name, dependencies, the `tc-detect` command, and tool config.
+
 [project]
 name = "tc-detector"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.0"  # the only place the version is written; `tc-detect` reads it from here
+description = "Finds Technical Credit candidates in Java microservice repos, confirmed by Claude."
 readme = "README.md"
 authors = [
     { name = "Vatsalya Dabhi", email = "vatsalyadabhi2003@gmail.com" }
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=2.8.0",
-    "pydriller>=2.12",
-    "python-dotenv>=1.2.4",
-    "pyyaml>=6.0.3",
-    "tree-sitter>=0.26.1",
-    "tree-sitter-java>=0.23.5",
+    "anthropic>=2.8.0",         # Claude API (confirms/rejects candidates)
+    "pydriller>=2.12",          # reads git history of target repos
+    "python-dotenv>=1.2.4",     # loads the API key from .env
+    "pyyaml>=6.0.3",            # reads targets.yaml
+    "tree-sitter>=0.26.1",      # parses source code into a syntax tree
+    "tree-sitter-java>=0.23.5", # the Java grammar for tree-sitter
 ]
 
+# Creates the `tc-detect` command, which runs main() in src/tc_detector/cli.py.
 [project.scripts]
-tc-detector = "tc_detector:main"
+tc-detect = "tc_detector.cli:main"
 
+# How the package gets built and installed (uv's own build tool).
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
 
+# Tools only developers need; installed by `uv sync`, not shipped to users.
 [dependency-groups]
 dev = [
-    "pytest>=9.2.0",
-    "ruff>=0.17.4",
+    "pytest>=9.2.0",  # runs the tests
+    "ruff>=0.17.4",   # lints and formats the code
 ]
+
+# Ruff settings live here so ruff behaves the same on every laptop and in CI.
+[tool.ruff]
+line-length = 100
+target-version = "py311"  # only suggest syntax that works on Python 3.11
+
+[tool.ruff.lint]
+# E/F = basic errors, I = import order, B = common bugs,
+# UP = modern syntax, SIM = simpler code, C4 = cleaner comprehensions
+select = ["E", "F", "I", "B", "UP", "SIM", "C4"]

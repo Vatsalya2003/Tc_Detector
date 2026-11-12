@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tc-detector.local/schemas/candidate.schema.json",
+  "title": "Candidate",
+  "description": "One Technical Credit claim made by one rule, with its evidence. Every rule outputs exactly this shape. FROZEN since Nov 11: do not change without the whole team agreeing. This file matches src/tc_detector/contracts/candidate.py. The Python code also checks one thing JSON Schema can't: that id was built from the other fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "repo", "commit", "service", "file", "line_start", "line_end",
+    "unit", "pattern", "category", "rule_id", "snippet"
+  ],
+  "properties": {
+    "id": {
+      "description": "Unique name for this finding, used to match it with a human label. Built as repo:service:file:location:pattern, where location is 'start-end' for line ranges or the word 'file' / 'service', and a missing file is written '-'. Example: petclinic:api-gateway:src/GatewayConfig.java:12-40:gateway",
+      "type": "string",
+      "pattern": "^[^:]+:[^:]+:[^:]+:([0-9]+-[0-9]+|file|service):[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "repo": {
+      "description": "Which target repo was scanned, e.g. 'petclinic'. No ':' allowed, because ':' separates the parts of the id.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^:]+$"
+    },
+    "commit": {
+      "description": "The exact git commit that was scanned. Code changes over time, so results only make sense at a fixed commit.",
+      "type": "string",
+      "minLength": 1
+    },
+    "service": {
+      "description": "Which microservice the evidence is in, e.g. 'api-gateway'. No ':' allowed (id separator).",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^:]+$"
+    },
+    "file": {
+      "description": "Path to the evidence file, relative to the service root and using '/'. Example: 'src/main/resources/logback-spring.xml'. Not allowed: a leading '/', '\\', ':' or '..', so each file can only be written one way. May be null only when unit is 'service'.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!(.*/)?\\.\\.(/|$)).+$"
+    },
+    "line_start": {
+      "description": "First line of the evidence, counting from 1. Required for unit 'line_range'; must be null for 'file' and 'service', since a fake range would break matching.",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "line_end": {
+      "description": "Last line of the evidence (same as line_start for a single line). Same null rules as line_start. The Python code also checks line_end >= line_start.",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "unit": {
+      "description": "How precise the claim is, which decides how it is matched to labels: 'line_range' = these exact lines, 'file' = this whole file, 'service' = this whole service.",
+      "enum": ["line_range", "file", "service"]
+    },
+    "pattern": {
+      "description": "What kind of credit this is, in lowercase words joined by dashes, e.g. 'tracing-span' or 'gateway'.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "category": {
+      "description": "Which of the six Technical Credit categories from the course spec this belongs to. Used to group results in the report.",
+      "enum": [
+        "observability", "api-stability", "modularity",
+        "automation", "abstraction", "configurability"
+      ]
+    },
+    "rule_id": {
+      "description": "Which rule produced this, so each rule's accuracy can be measured. Format: category-name-NN, e.g. 'observability-tracing-01'. Must start with this candidate's own category (checked below).",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$"
+    },
+    "snippet": {
+      "description": "The evidence text that Claude reads to confirm or reject the claim. Capped at 2000 characters because we pay for every character sent to Claude.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    }
+  },
+  "allOf": [
+    {
+      "description": "A line_range claim needs a file and both line numbers. Any other unit must have null line numbers.",
+      "if": { "properties": { "unit": { "const": "line_range" } } },
+      "then": {
+        "properties": {
+          "file": { "type": "string" },
+          "line_start": { "type": "integer" },
+          "line_end": { "type": "integer" }
+        }
+      },
+      "else": {
+        "properties": { "line_start": { "type": "null" }, "line_end": { "type": "null" } }
+      }
+    },
+    {
+      "description": "A file claim must say which file.",
+      "if": { "properties": { "unit": { "const": "file" } } },
+      "then": { "properties": { "file": { "type": "string" } } }
+    },
+    {
+      "description": "This block and the five after it (one per category): rule_id must start with its category, which catches copy-paste mistakes.",
+      "if": { "properties": { "category": { "const": "observability" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^observability-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    },
+    {
+      "if": { "properties": { "category": { "const": "api-stability" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^api-stability-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    },
+    {
+      "if": { "properties": { "category": { "const": "modularity" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^modularity-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    },
+    {
+      "if": { "properties": { "category": { "const": "automation" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^automation-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    },
+    {
+      "if": { "properties": { "category": { "const": "abstraction" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^abstraction-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    },
+    {
+      "if": { "properties": { "category": { "const": "configurability" } } },
+      "then": { "properties": { "rule_id": { "pattern": "^configurability-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2}$" } } }
+    }
+  ]
+}
