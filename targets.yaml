@@ -1,0 +1,16 @@
+# Target repos the detector runs against, pinned to exact commits so results are reproducible.
+#   name:   short id used in results/ and ground_truth/
+#   url:    git clone URL (cloned into targets/, which is gitignored)
+#   commit: full SHA to check out; replace TODO-pin-sha before running experiments
+#   role:   "dev" = tune rules on it; "test" = held-out, scored once after Dec 1, never tuned on
+
+targets:
+  - name: spring-petclinic-microservices
+    url: https://github.com/spring-petclinic/spring-petclinic-microservices
+    commit: TODO-pin-sha
+    role: dev
+
+  - name: cs6510-checkout-microservices
+    url: TODO
+    commit: TODO-pin-sha
+    role: test
