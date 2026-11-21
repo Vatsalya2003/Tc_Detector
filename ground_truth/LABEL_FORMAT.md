@@ -79,22 +79,22 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:customers-service:src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:48-55:distributed-tracing",
+  "label_id": "spring-petclinic-microservices:customers-service:pom.xml:47-50:distributed-tracing",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
   "service": "customers-service",
-  "file": "src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java",
-  "line_start": 48,
-  "line_end": 55,
+  "file": "pom.xml",
+  "line_start": 47,
+  "line_end": 50,
   "unit": "line_range",
   "pattern": "distributed-tracing",
   "category": "observability",
   "is_tc": true,
-  "labeller": "A",
+  "labeller": "D",
   "second_labeller": null,
   "second_is_tc": null,
   "adjudicated_by": null,
-  "notes": "Span around the owner lookup; tracing backend is swappable via config"
+  "notes": "Tracing enabled via the zipkin starter dependency; pending Vatsalya's confirmation that a dependency alone counts."
 }
 ```
 
@@ -121,7 +121,7 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 }
 ```
 
-### `service`: labellers disagreed, D settled it
+### `service`: labellers disagreed, A settled it
 
 ```json
 {
@@ -136,10 +136,10 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
   "pattern": "gateway",
   "category": "abstraction",
   "is_tc": true,
-  "labeller": "A",
-  "second_labeller": "C",
+  "labeller": "C",
+  "second_labeller": "B",
   "second_is_tc": false,
-  "adjudicated_by": "D",
+  "adjudicated_by": "A",
   "notes": "Routes all external traffic; hides service topology"
 }
 ```
