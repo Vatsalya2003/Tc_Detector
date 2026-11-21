@@ -98,18 +98,18 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 }
 ```
 
-### `file`: judged absent, both labellers agreed
+### `line_range`: judged absent, both labellers agreed
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:config-server:src/main/resources/application.yml:file:feature-flags",
+  "label_id": "spring-petclinic-microservices:config-server:src/main/resources/application.yml:9-11:feature-flags",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
   "service": "config-server",
   "file": "src/main/resources/application.yml",
-  "line_start": null,
-  "line_end": null,
-  "unit": "file",
+  "line_start": 9,
+  "line_end": 11,
+  "unit": "line_range",
   "pattern": "feature-flags",
   "category": "configurability",
   "is_tc": false,
