@@ -110,6 +110,76 @@ def test_routes_in_properties_file(tmp_path):
     assert "application.properties:3-3 -> lb://customers-service" in found["router"].snippet
 
 
+ROUTE_LOCATOR_BEAN = """\
+package x;
+
+import org.springframework.cloud.gateway.route.RouteLocator;
+import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+
+@Configuration
+class Routes {
+    @Bean
+    RouteLocator customRoutes(RouteLocatorBuilder builder) {
+        return builder.routes()
+            .route("owner", r -> r.path("/api/owners/{id}")
+                .filters(f -> { return f.stripPrefix(2); })
+                .uri("lb://customers-service"))
+            .build();
+    }
+
+    @Bean
+    WebClient webClient() { return WebClient.create(); }
+}
+"""
+
+
+def routing_service(java_path: str, java: str) -> dict[str, str]:
+    """A service with no name signal and no YAML routes, so only Java routes can flag it."""
+    return {
+        **BACKENDS,
+        "routing/pom.xml": pom("spring-cloud-starter-gateway"),
+        f"routing/{RES}/application.yml": app_name("routing-service"),
+        f"routing/{java_path}": java,
+    }
+
+
+def test_java_route_locator_bean(tmp_path):
+    repo = write(tmp_path, routing_service(f"{JAVA}/Routes.java", ROUTE_LOCATOR_BEAN))
+    found = run(repo)
+    assert list(found) == ["routing-service"]
+    assert (
+        "strong: gateway routes (Java RouteLocator bean) at src/main/java/x/Routes.java:8-15"
+        " -> lb://customers-service"
+    ) in found["routing-service"].snippet
+
+
+def test_route_locator_builder_only_imported(tmp_path):
+    java = (
+        "package x;\n"
+        "import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;\n"
+        "class Util { RouteLocatorBuilder builder; }\n"
+    )
+    repo = write(tmp_path, routing_service(f"{JAVA}/Util.java", java))
+    assert run(repo) == {}
+
+
+def test_route_locator_bean_in_test_code_is_ignored(tmp_path):
+    repo = write(tmp_path, routing_service("src/test/java/x/Routes.java", ROUTE_LOCATOR_BEAN))
+    assert run(repo) == {}
+
+
+def test_route_locator_bean_without_a_route_uri(tmp_path):
+    java = (
+        "package x;\n"
+        "class Routes {\n"
+        "    @Bean\n"
+        "    RouteLocator none(RouteLocatorBuilder builder) { return builder.routes().build(); }\n"
+        "}\n"
+    )
+    repo = write(tmp_path, routing_service(f"{JAVA}/Routes.java", java))
+    assert run(repo) == {}
+
+
 def test_zuul_service(tmp_path):
     zuul_app = """\
     package x;

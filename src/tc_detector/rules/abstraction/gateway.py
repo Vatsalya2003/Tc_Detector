@@ -8,6 +8,8 @@ Signals:
   strong  gateway routes: a `routes` list under `spring.cloud.gateway` (any variant,
           e.g. `spring.cloud.gateway.server.webflux.routes`) whose entries have a `uri`,
           in application*/bootstrap* .yml/.yaml/.properties
+  strong  Java-defined gateway routes: a @Bean method returning RouteLocator that uses
+          RouteLocatorBuilder and defines a route (`.routes()`, `.route(`, `.uri(`)
   strong  Zuul proxy: `@EnableZuulProxy` in Java, or a `zuul.routes` config
   weak    gateway dependency: spring-cloud-starter-gateway* or
           spring-cloud-starter-netflix-zuul in the service's pom.xml / build.gradle(.kts)
@@ -20,8 +22,6 @@ A service is a candidate if it has any strong signal, or a name signal plus a
 dependency or call signal. Class names are never used: an `...Adapter` class inside
 an ordinary service is not a gateway. A dependency plus calls without a name is not
 enough either (PetClinic's genai-service has both and is not a gateway).
-
-Deliberately not detected: routes built in Java with RouteLocatorBuilder.
 
 Service discovery and naming are stand-ins until the scanner lands:
   - a service is a folder below the repo root that holds a build file
@@ -73,6 +73,15 @@ _DEPENDENCY = re.compile(
     r"\b(spring-cloud-starter-gateway[\w-]*|spring-cloud-starter-netflix-zuul)\b"
 )
 _ZUUL_ANNOTATION = re.compile(r"@EnableZuulProxy\b")
+# `@Bean` (plus other annotations/modifiers, but no `{` `}` `;` in between) on a method
+# whose return type is RouteLocator.
+_ROUTE_LOCATOR_BEAN = re.compile(r"@Bean\b[^;{}]*?\bRouteLocator\s+\w+\s*\(")
+_ROUTE_DSL_CALLS = (
+    re.compile(r"\.routes\(\s*\)"),
+    re.compile(r"\.route\("),
+    re.compile(r"\.uri\("),
+)
+_ROUTE_DSL_URI = re.compile(r'\.uri\(\s*"([^"]+)"')
 _CALL_TARGETS = (
     re.compile(r'@FeignClient\(\s*(?:(?:name|value)\s*=\s*)?"([\w.-]+)"'),
     re.compile(r'"(?:https?|lb)://([\w.-]+)'),
@@ -288,6 +297,57 @@ def properties_signals(text: str, where: str) -> list[str]:
     return found
 
 
+def _block_end(text: str, open_brace: int) -> int:
+    """Index just past the `}` matching the `{` at `open_brace`, skipping strings and comments."""
+    depth, i = 0, open_brace
+    while i < len(text):
+        c = text[i]
+        if text.startswith("//", i):
+            i = text.find("\n", i)
+            if i < 0:
+                return len(text)
+        elif text.startswith("/*", i):
+            i = text.find("*/", i)
+            if i < 0:
+                return len(text)
+            i += 1
+        elif c in "\"'":
+            i += 1
+            while i < len(text) and text[i] != c:
+                i += 2 if text[i] == "\\" else 1
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return len(text)
+
+
+def java_route_signals(text: str, where: str) -> list[str]:
+    """Strong signals in one Java file: @Bean RouteLocator methods that define routes.
+
+    The method must use RouteLocatorBuilder and call `.routes()`, `.route(` and `.uri(`.
+    """
+    found = []
+    for m in _ROUTE_LOCATOR_BEAN.finditer(text):
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        method = text[m.start() : _block_end(text, brace)]
+        if "RouteLocatorBuilder" not in method or not all(
+            p.search(method) for p in _ROUTE_DSL_CALLS
+        ):
+            continue
+        first = text.count("\n", 0, m.start()) + 1
+        last = first + method.count("\n")
+        uris = _ROUTE_DSL_URI.findall(method)
+        target = f" -> {', '.join(uris)}" if uris else ""
+        found.append(f"gateway routes (Java RouteLocator bean) at {where}:{first}-{last}{target}")
+    return found
+
+
 def collect(service: Service, all_roots: list[Path], known: set[str]) -> Evidence:
     """Gather every signal for one service."""
     ev = Evidence(name_words=name_words(service.name))
@@ -305,6 +365,7 @@ def collect(service: Service, all_roots: list[Path], known: set[str]) -> Evidenc
                 if m := _DEPENDENCY.search(line):
                     ev.dependency.append(f"gateway dependency {m.group(1)} at {where}:{i}")
         elif path.suffix == ".java":
+            ev.strong += java_route_signals(text, where)
             for i, line in enumerate(text.splitlines(), start=1):
                 if _ZUUL_ANNOTATION.search(line):
                     ev.strong.append(f"@EnableZuulProxy at {where}:{i}")
