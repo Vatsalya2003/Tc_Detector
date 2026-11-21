@@ -79,11 +79,11 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:customers-service:src/main/java/org/springframework/samples/petclinic/customers/OwnerResource.java:48-55:distributed-tracing",
+  "label_id": "spring-petclinic-microservices:customers-service:src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:48-55:distributed-tracing",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
   "service": "customers-service",
-  "file": "src/main/java/org/springframework/samples/petclinic/customers/OwnerResource.java",
+  "file": "src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java",
   "line_start": 48,
   "line_end": 55,
   "unit": "line_range",
@@ -102,22 +102,22 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:config-server:src/main/resources/application.yml:9-11:feature-flags",
+  "label_id": "spring-petclinic-microservices:vets-service:src/main/java/org/springframework/samples/petclinic/vets/system/CacheConfig.java:28-28:feature-flags",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
-  "service": "config-server",
-  "file": "src/main/resources/application.yml",
-  "line_start": 9,
-  "line_end": 11,
+  "service": "vets-service",
+  "file": "src/main/java/org/springframework/samples/petclinic/vets/system/CacheConfig.java",
+  "line_start": 28,
+  "line_end": 28,
   "unit": "line_range",
   "pattern": "feature-flags",
   "category": "configurability",
   "is_tc": false,
-  "labeller": "B",
-  "second_labeller": "C",
+  "labeller": "C",
+  "second_labeller": "B",
   "second_is_tc": false,
   "adjudicated_by": null,
-  "notes": ""
+  "notes": "@Profile(\"production\") is an environment switch, not a feature flag"
 }
 ```
 
