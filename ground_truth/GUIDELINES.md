@@ -72,6 +72,27 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 - **Known limitation:** files outside any service can't be labelled.
   Example: the root `docker-compose.yml` and root `pom.xml`.
 
+### Patterns the repo doesn't have
+
+**Decided by B.**
+
+- If nothing in the repo qualifies for a pattern, that pattern gets no labels. That's fine.
+- Don't label its near-misses (files that look close but don't qualify) as `is_tc: false`. Skip them.
+  Example: PetClinic's controllers for `versioned-api`, or its `@EventListener` class for `event-schema-versioning`.
+- Why: a `false` label doesn't change the score.
+  A candidate that matches it is a false positive, the same as a candidate that matches no label.
+  Easy "no" labels would also land in the agreement sample and make agreement look higher than it is.
+- The negative examples below show what doesn't count. You don't have to find and label every file like them.
+
+### `file` units: types nested inside another class
+
+- A type declared inside another class or record (e.g. a nested `record`) gets no label of its own.
+  It's covered by the label for the file it sits in.
+- Why: a `file` label has no line numbers, so a second label for the same file and pattern gets the same `label_id`.
+  `load_labels` rejects duplicate ids.
+- Give the file one label per pattern: `is_tc: true` if any type in it qualifies.
+  Name the type that qualifies in `notes`, e.g. `Outer.Inner`.
+
 ## Patterns at a glance
 
 | Pattern | Category | Owner | Unit |
@@ -83,7 +104,7 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 | `structured-logging` | observability | A | file (confirmed by owner) |
 | `custom-metrics` | observability | A | line_range (confirmed by owner) |
 | `versioned-api` | api-stability | B | file |
-| `immutable-data-contracts` | api-stability | B | file (needs owner confirmation) |
+| `immutable-data-contracts` | api-stability | B | file (confirmed by owner) |
 | `event-schema-versioning` | modularity | B | file |
 | `circuit-breaker-retry` | automation | C | line_range |
 | `health-checks` | automation | C | service (needs owner confirmation) |
@@ -311,7 +332,8 @@ It has `@RequestMapping("/owners")` on line 39: no spec file, no version.
 - A DTO with Lombok `@Value`.
 - A DTO with `@JsonIgnoreProperties(ignoreUnknown = true)`.
 
-**Matching unit:** `file` (needs owner confirmation). One label per DTO file.
+**Matching unit:** `file` (confirmed by owner). One label per DTO file.
+`line_start` and `line_end` are `null`.
 
 **Positive example:** api-gateway `.../api/dto/OwnerDetails.java`.
 Line 25: `public record OwnerDetails(`.
