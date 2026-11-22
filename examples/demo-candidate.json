@@ -1,0 +1,14 @@
+{
+  "id": "demo-shop:orders:src/main/java/shop/orders/PaymentClient.java:6-14:circuit-breaker",
+  "repo": "demo-shop",
+  "commit": "0000000",
+  "service": "orders",
+  "file": "src/main/java/shop/orders/PaymentClient.java",
+  "line_start": 6,
+  "line_end": 14,
+  "unit": "line_range",
+  "pattern": "circuit-breaker",
+  "category": "automation",
+  "rule_id": "automation-cb-annotation-01",
+  "snippet": "    @CircuitBreaker(name = \"payments\", fallbackMethod = \"queuePayment\")\n    @Retry(name = \"payments\")\n    public PaymentResult charge(Order order) {\n        return paymentGateway.charge(order.total(), order.cardToken());\n    }\n\n    private PaymentResult queuePayment(Order order, Throwable cause) {\n        return PaymentResult.queued(order.id());\n    }"
+}

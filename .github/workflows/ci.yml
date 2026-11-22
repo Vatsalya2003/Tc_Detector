@@ -1,0 +1,48 @@
+# CI: lint and test on every PR and on every push to main.
+# Runs offline: no secrets, no API key, no cloned targets/.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch/PR cancels the older run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: lint-and-test  # required check name; renaming it breaks branch protection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      UV_PYTHON_DOWNLOADS: never  # use the Python from setup-python, never download one
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.11"
+
+      # 0.12.x matches build-system.requires (uv_build>=0.12.5,<0.13) in pyproject.toml.
+      # Bump both together.
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          version: "0.12.24"
+          enable-cache: true
+
+      - name: Install (exactly as locked)
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest
