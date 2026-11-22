@@ -83,7 +83,7 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 | `structured-logging` | observability | A | file (confirmed by owner) |
 | `custom-metrics` | observability | A | line_range (confirmed by owner) |
 | `versioned-api` | api-stability | B | file |
-| `immutable-data-contracts` | api-stability | B | file (needs owner confirmation) |
+| `immutable-data-contracts` | api-stability | B | file (confirmed by owner) |
 | `event-schema-versioning` | modularity | B | file |
 | `circuit-breaker-retry` | automation | C | line_range |
 | `health-checks` | automation | C | service (needs owner confirmation) |
@@ -311,7 +311,8 @@ It has `@RequestMapping("/owners")` on line 39: no spec file, no version.
 - A DTO with Lombok `@Value`.
 - A DTO with `@JsonIgnoreProperties(ignoreUnknown = true)`.
 
-**Matching unit:** `file` (needs owner confirmation). One label per DTO file.
+**Matching unit:** `file` (confirmed by owner). One label per DTO file.
+`line_start` and `line_end` are `null`.
 
 **Positive example:** api-gateway `.../api/dto/OwnerDetails.java`.
 Line 25: `public record OwnerDetails(`.
