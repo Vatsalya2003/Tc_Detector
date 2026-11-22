@@ -39,7 +39,8 @@ A = Vatsalya, B = Abhi, C = Neil, D = Karan.
 ### Agreement sample
 
 - Draw a random 20% of each pattern's labels, rounded up, so a pattern with one label still gets it checked.
-- Use a fixed seed, and write the seed in the change log below, so anyone can redraw the same sample.
+- The seed is fixed in advance: **2026**. Always draw with it.
+  Anyone can then redraw the same sample to check it, and nobody can redraw until they like the result.
 - For each label in the sample, the second labeller judges that pattern at that place: present or absent.
 - The second labeller must not see the primary's answers first.
 - Disagreements: see "Second labeller and disagreements" in LABEL_FORMAT.md.
@@ -50,7 +51,7 @@ Run it with `eval/agreement.py`, from the repo root, once the primary labels are
 
    ```sh
    uv run python -m tc_detector.eval.agreement sample --labels ground_truth/petclinic.json \
-       --seed <any whole number> --out ground_truth/petclinic-agreement.json
+       --seed 2026 --out ground_truth/petclinic-agreement.json
    ```
 
 2. Second labellers: find the rows with your letter in `second_labeller`.
@@ -494,7 +495,7 @@ catch (ChargeFailed e) { visits.cancel(petId, slot); }  // compensation
 
 ## Change log
 
-Record the sample seed here, and every change after a freeze.
+Record every change after a freeze here.
 
 | Date | label_id | Change | Reason | Who |
 |---|---|---|---|---|

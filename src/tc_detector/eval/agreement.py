@@ -4,9 +4,9 @@ Run from the repo root. The steps, in order:
 
 1. Once a repo's first labels are frozen, draw the sample:
        uv run python -m tc_detector.eval.agreement sample --labels ground_truth/petclinic.json \\
-           --seed 6510 --out ground_truth/petclinic-agreement.json
+           --seed 2026 --out ground_truth/petclinic-agreement.json
    This writes a BLIND worksheet: where each sampled label is and who checks it, but not
-   the first labeller's answer or notes. Write the seed in GUIDELINES.md's change log.
+   the first labeller's answer or notes. Always use the fixed seed (SEED below).
 2. Each second labeller sets "second_is_tc" to true or false on their own rows, judging
    from GUIDELINES.md and the code alone, without opening the label file first.
 3. Copy the answers into the label file:
@@ -41,6 +41,10 @@ from tc_detector.eval.kappa import Agreement, agreement_by, agreement_overall, o
 
 # How much of each pattern's labels the second labeller checks (GUIDELINES.md).
 SAMPLE_PERCENT = 20
+
+# The seed the team fixed in advance (GUIDELINES.md, "Agreement sample"), so nobody can
+# redraw until they like the sample.
+SEED = 2026
 
 # Who owns each pattern: GUIDELINES.md, "Patterns at a glance".
 # A test compares both tables here with GUIDELINES.md, so they can't drift apart.
@@ -350,7 +354,10 @@ def main(argv: list[str] | None = None) -> None:
         help="one repo's label file, e.g. ground_truth/petclinic.json",
     )
     sample.add_argument(
-        "--seed", required=True, type=int, help="any whole number; write it in the change log"
+        "--seed",
+        type=int,
+        default=SEED,
+        help=f"default {SEED}, the seed fixed in GUIDELINES.md; another seed only warns",
     )
     sample.add_argument(
         "--out",
@@ -395,7 +402,8 @@ def _run_sample(labels_path: Path, seed: int, out: Path) -> None:
     per_person = Counter(row["second_labeller"] or "no second labeller yet" for row in rows)
     for person, count in sorted(per_person.items()):
         print(f"  {person}: {count} to check")
-    print("Write the seed in the change log at the bottom of GUIDELINES.md.")
+    if seed != SEED:
+        print(f"Warning: GUIDELINES.md fixes the seed at {SEED}. This sample doesn't count.")
 
 
 def _run_merge(labels_path: Path, worksheet_path: Path) -> None:

@@ -12,6 +12,7 @@ from tc_detector.eval.agreement import (
     OWNER,
     ROW_KEYS,
     SECOND_LABELLER,
+    SEED,
     draw_sample,
     format_agreement,
     main,
@@ -321,6 +322,23 @@ def test_sample_merge_kappa_end_to_end(tmp_path, capsys):
     assert "all          2       2       1.00    n/a" in capsys.readouterr().out
 
 
+def test_sample_uses_the_fixed_seed_unless_told_otherwise(tmp_path, capsys):
+    labels_path = tmp_path / "labels.json"
+    save_labels(labels_path, LABELS)
+    worksheet_path = tmp_path / "worksheet.json"
+    main(["sample", "--labels", str(labels_path), "--out", str(worksheet_path)])
+    assert json.loads(worksheet_path.read_text())["seed"] == SEED == 2026
+    assert "Warning" not in capsys.readouterr().out
+
+
+def test_sample_with_another_seed_warns_that_it_does_not_count(tmp_path, capsys):
+    labels_path = tmp_path / "labels.json"
+    save_labels(labels_path, LABELS)
+    worksheet_path = tmp_path / "worksheet.json"
+    main(["sample", "--labels", str(labels_path), "--seed", "1", "--out", str(worksheet_path)])
+    assert "fixes the seed at 2026. This sample doesn't count." in capsys.readouterr().out
+
+
 def test_sample_never_overwrites_a_worksheet(tmp_path):
     labels_path = tmp_path / "labels.json"
     save_labels(labels_path, LABELS)
@@ -362,3 +380,11 @@ def test_owner_and_second_labeller_tables_match_the_guidelines():
     )
     assert owners == OWNER
     assert seconds == SECOND_LABELLER
+
+
+def test_the_seed_matches_the_guidelines():
+    """SEED is fixed in GUIDELINES.md, "Agreement sample"; the code must use the same one."""
+    guidelines = Path(__file__).parents[2] / "ground_truth" / "GUIDELINES.md"
+    text = guidelines.read_text(encoding="utf-8")
+    assert f"The seed is fixed in advance: **{SEED}**." in text
+    assert f"--seed {SEED} --out" in text
