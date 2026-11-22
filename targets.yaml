@@ -1,15 +1,26 @@
+# Every experiment uses exactly these commits; clone them with: uv run python scripts/clone_targets.py
+#
 # Target repos the detector runs against, pinned to exact commits so results are reproducible.
 #   name:   short id used in results/ and ground_truth/
-#   url:    git clone URL (cloned into targets/, which is gitignored)
-#   commit: full SHA to check out; replace TODO-pin-sha before running experiments
-#   role:   "dev" = tune rules on it; "test" = held-out, scored once after Dec 1, never tuned on
+#   url:    git clone URL (cloned into targets/<name>, which is gitignored)
+#   commit: full 40-character SHA to check out
+#   role:   "dev" = tune rules on it;
+#           "dev-config" = config repo a dev target reads at runtime (not scanned on its own);
+#           "test" = held-out, scored once after Dec 1, never tuned on
 
 targets:
   - name: spring-petclinic-microservices
     url: https://github.com/spring-petclinic/spring-petclinic-microservices
-    commit: TODO-pin-sha
+    commit: e8b747ab522721076cacb5cf688eb8a54ba8c5c9  # 2026-10-23
     role: dev
 
+  # PetClinic's config-server reads this repo. Latest main commit at or before 2026-10-23.
+  - name: spring-petclinic-microservices-config
+    url: https://github.com/spring-petclinic/spring-petclinic-microservices-config
+    commit: 323993ce2519c6d02df63e08bf4458d123d3b611  # 2026-05-02
+    role: dev-config
+
+  # TODO: URL and SHA not provided yet. clone_targets.py skips this entry until they are filled in.
   - name: cs6510-checkout-microservices
     url: TODO
     commit: TODO-pin-sha
