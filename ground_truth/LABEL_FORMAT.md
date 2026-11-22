@@ -79,49 +79,49 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:customers-service:src/main/java/org/springframework/samples/petclinic/customers/OwnerResource.java:48-55:distributed-tracing",
+  "label_id": "spring-petclinic-microservices:customers-service:pom.xml:47-50:distributed-tracing",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
   "service": "customers-service",
-  "file": "src/main/java/org/springframework/samples/petclinic/customers/OwnerResource.java",
-  "line_start": 48,
-  "line_end": 55,
+  "file": "pom.xml",
+  "line_start": 47,
+  "line_end": 50,
   "unit": "line_range",
   "pattern": "distributed-tracing",
   "category": "observability",
   "is_tc": true,
-  "labeller": "A",
+  "labeller": "D",
   "second_labeller": null,
   "second_is_tc": null,
   "adjudicated_by": null,
-  "notes": "Span around the owner lookup; tracing backend is swappable via config"
+  "notes": "Tracing enabled via the zipkin starter dependency; pending Vatsalya's confirmation that a dependency alone counts."
 }
 ```
 
-### `file`: judged absent, both labellers agreed
+### `line_range`: judged absent, both labellers agreed
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:config-server:src/main/resources/application.yml:file:feature-flags",
+  "label_id": "spring-petclinic-microservices:vets-service:src/main/java/org/springframework/samples/petclinic/vets/system/CacheConfig.java:28-28:feature-flags",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
-  "service": "config-server",
-  "file": "src/main/resources/application.yml",
-  "line_start": null,
-  "line_end": null,
-  "unit": "file",
+  "service": "vets-service",
+  "file": "src/main/java/org/springframework/samples/petclinic/vets/system/CacheConfig.java",
+  "line_start": 28,
+  "line_end": 28,
+  "unit": "line_range",
   "pattern": "feature-flags",
   "category": "configurability",
   "is_tc": false,
-  "labeller": "B",
-  "second_labeller": "C",
+  "labeller": "C",
+  "second_labeller": "B",
   "second_is_tc": false,
   "adjudicated_by": null,
-  "notes": ""
+  "notes": "@Profile(\"production\") is an environment switch, not a feature flag"
 }
 ```
 
-### `service`: labellers disagreed, D settled it
+### `service`: labellers disagreed, A settled it
 
 ```json
 {
@@ -136,10 +136,10 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
   "pattern": "gateway",
   "category": "abstraction",
   "is_tc": true,
-  "labeller": "A",
-  "second_labeller": "C",
+  "labeller": "C",
+  "second_labeller": "B",
   "second_is_tc": false,
-  "adjudicated_by": "D",
+  "adjudicated_by": "A",
   "notes": "Routes all external traffic; hides service topology"
 }
 ```
