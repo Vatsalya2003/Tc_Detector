@@ -4,6 +4,8 @@
 #   name:   short id used in results/ and ground_truth/
 #   url:    git clone URL (cloned into targets/<name>, which is gitignored)
 #   commit: full 40-character SHA to check out
+#   path:   optional subfolder to scan (default: the whole repo). The whole repo is still
+#           cloned; run rules on targets/<name>/<path> and pass --repo-name <name>
 #   role:   "dev" = tune rules on it;
 #           "dev-config" = config repo a dev target reads at runtime (not scanned on its own);
 #           "test" = held-out, scored once after Dec 1, never tuned on
@@ -20,8 +22,11 @@ targets:
     commit: 323993ce2519c6d02df63e08bf4458d123d3b611  # 2026-05-02
     role: dev-config
 
-  # TODO: URL and SHA not provided yet. clone_targets.py skips this entry until they are filled in.
+  # Abhi's CS6510 checkout system. Latest main commit, 2026-11-03 (Week 6, event-driven).
+  # The repo holds week1-monolith .. week6-events side by side; only week6-events is
+  # scanned, so services from different weeks don't mix.
   - name: cs6510-checkout-microservices
-    url: TODO
-    commit: TODO-pin-sha
+    url: https://github.com/stalwartquintessence/CS6510-2026
+    commit: 241caa78568f1fb19056b85d318adfd07f8326b0  # 2026-11-03
+    path: week6-events
     role: test

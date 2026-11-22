@@ -65,12 +65,33 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
   Example: `src/main/resources/application.yml`.
   (Defined in `checks.py` and LABEL_FORMAT.md.)
 - `service`: written as in the contract tests, e.g. `api-gateway`, `customers-service`, `config-server`.
-- **Needs team confirmation:** nothing on main says how to derive `service` yet.
-  Proposal: use `spring.application.name` from the service's `application.yml`.
+- **Agreed by A; waiting on B and C:** use `spring.application.name` from the service's `application.yml`.
   So `spring-petclinic-api-gateway/` becomes `api-gateway`.
-  (For config-server, which has no name set, use `config-server`.)
+  If no name is set, fall back to the folder name minus the prefix all service folders share.
+  So `spring-petclinic-config-server/` becomes `config-server`.
 - **Known limitation:** files outside any service can't be labelled.
   Example: the root `docker-compose.yml` and root `pom.xml`.
+
+### Patterns the repo doesn't have
+
+**Decided by B.**
+
+- If nothing in the repo qualifies for a pattern, that pattern gets no labels. That's fine.
+- Don't label its near-misses (files that look close but don't qualify) as `is_tc: false`. Skip them.
+  Example: PetClinic's controllers for `versioned-api`, or its `@EventListener` class for `event-schema-versioning`.
+- Why: a `false` label doesn't change the score.
+  A candidate that matches it is a false positive, the same as a candidate that matches no label.
+  Easy "no" labels would also land in the agreement sample and make agreement look higher than it is.
+- The negative examples below show what doesn't count. You don't have to find and label every file like them.
+
+### `file` units: types nested inside another class
+
+- A type declared inside another class or record (e.g. a nested `record`) gets no label of its own.
+  It's covered by the label for the file it sits in.
+- Why: a `file` label has no line numbers, so a second label for the same file and pattern gets the same `label_id`.
+  `load_labels` rejects duplicate ids.
+- Give the file one label per pattern: `is_tc: true` if any type in it qualifies.
+  Name the type that qualifies in `notes`, e.g. `Outer.Inner`.
 
 ## Patterns at a glance
 
@@ -79,11 +100,11 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 | `gateway` | abstraction | D | service |
 | `externalised-config` | configurability | D | service |
 | `feature-flags` | configurability | D | line_range |
-| `distributed-tracing` | observability | A | line_range |
-| `structured-logging` | observability | A | line_range |
-| `custom-metrics` | observability | A | line_range (needs owner confirmation) |
+| `distributed-tracing` | observability | A | service (confirmed by owner) |
+| `structured-logging` | observability | A | file (confirmed by owner) |
+| `custom-metrics` | observability | A | line_range (confirmed by owner) |
 | `versioned-api` | api-stability | B | file |
-| `immutable-data-contracts` | api-stability | B | file (needs owner confirmation) |
+| `immutable-data-contracts` | api-stability | B | file (confirmed by owner) |
 | `event-schema-versioning` | modularity | B | file |
 | `circuit-breaker-retry` | automation | C | line_range |
 | `health-checks` | automation | C | service (needs owner confirmation) |
@@ -188,27 +209,26 @@ Label the `@ConditionalOnProperty` line.
 
 **What it is:** requests carry a trace across services, so one call can be followed end to end.
 
-**Counts as TC:**
-- A tracing dependency (`spring-boot-starter-zipkin`, `micrometer-tracing-bridge-*`, OpenTelemetry).
-- Tracing annotations (`@Observed`, `@NewSpan`) or manual spans (`tracer.nextSpan()`).
+**Counts as TC** (either one is enough):
+- The service's build file has a tracing dependency (`spring-boot-starter-zipkin`, `micrometer-tracing-bridge-*`, OpenTelemetry).
+  A dependency alone counts.
+- The service has explicit tracing code: annotations (`@Observed`, `@NewSpan`) or manual spans (`tracer.nextSpan()`).
 
-**Matching unit:** `line_range`.
-- Dependency: the whole `<dependency>` ... `</dependency>` block.
-- Annotation: the annotation line.
-- Manual span: from the span start to its end/close.
+**Matching unit:** `service` (confirmed by owner). One label per service.
+`file`, `line_start` and `line_end` are `null`. Put the evidence in `notes`.
 
-**Positive example:** customers-service `pom.xml` lines 47-50 (`spring-boot-starter-zipkin`).
-The same block is in the `pom.xml` of api-gateway, vets-service, visits-service and genai-service. Label each one.
+**Positive example:** service `customers-service`.
+Evidence: `pom.xml` lines 47-50 (`spring-boot-starter-zipkin`).
+api-gateway, vets-service, visits-service and genai-service have the same dependency. Label each one.
 
-> **Needs owner confirmation (Vatsalya):** does a dependency alone count as tracing?
-> PetClinic has no tracing annotations, so this decides most of its tracing labels.
-
-**Negative example:** api-gateway `src/main/resources/application.yml` lines 46-47 (`reactor.context-propagation: auto`).
-It passes context between threads, but it doesn't trace anything by itself.
+**Negative example:** service `discovery-server`, `is_tc: false`.
+No tracing dependency and no tracing code.
 
 **Edge cases:**
 - `micrometer-registry-prometheus` is metrics, not tracing.
-- The `tracing-server` (Zipkin) in the root `docker-compose.yml` is outside any service. Don't label it.
+- `reactor.context-propagation: auto` (api-gateway `application.yml` lines 46-47) passes context between threads.
+  On its own it doesn't make a service positive.
+- The Zipkin server (`tracing-server`) in the root `docker-compose.yml` is not a service label. It's outside any service.
 
 ---
 
@@ -217,30 +237,35 @@ It passes context between threads, but it doesn't trace anything by itself.
 **What it is:** logs have a fixed machine-readable shape and carry a correlation/trace ID across services.
 (This is the "correlation-ID logging" pattern from CLAUDE.md.)
 
-**Counts as TC:**
-- `MDC.put("correlationId", ...)` or `%X{traceId}` in a log pattern.
-- A JSON encoder in logback (`LogstashEncoder`, `JsonEncoder`).
-- `logging.structured.format.console` in Spring config.
+**Counts as TC** (confirmed by owner). Only explicit correlation-ID setup counts:
+- `MDC.put` of a correlation or trace ID (e.g. `MDC.put("correlationId", ...)`).
+- A logging pattern that includes `traceId` or `correlationId` (e.g. `%X{traceId}` in logback, or in `logging.pattern.*`).
 
-**Matching unit:** `line_range`.
-The range covers the `MDC.put` ... `MDC.remove` block, or the encoder/pattern element in the logback file.
+**Matching unit:** `file` (confirmed by owner).
+One label for the file that does the setup: the Java file with the `MDC.put`, or the logging config file with the pattern.
+`line_start` and `line_end` are `null`.
 
 **Positive example (synthetic):** PetClinic has none.
 
 ```java
+// src/main/java/x/CorrelationIdFilter.java
 MDC.put("correlationId", request.getHeader("X-Correlation-Id"));
 try { chain.doFilter(request, response); }
 finally { MDC.remove("correlationId"); }
 ```
 
-Label from the `MDC.put` line to the `MDC.remove` line.
+Label the whole file `src/main/java/x/CorrelationIdFilter.java`.
 
-**Negative example:** customers-service `src/main/resources/logback-spring.xml` lines 1-6.
-It uses Spring's default `base.xml`: plain text, no IDs.
+**Negative examples:**
+- Plain log statements: customers-service `.../customers/web/OwnerResource.java`, `is_tc: false`.
+  Line 89 `log.info("Saving owner {}", ownerModel);` logs data, but sets up no correlation ID.
+- customers-service `src/main/resources/logback-spring.xml`, `is_tc: false`.
+  It uses Spring's default `base.xml`: no `traceId` or `correlationId` in the pattern.
 
 **Edge cases:**
-- Setting log levels (`logging.level...`) is not structured logging.
-- `log.info("owner " + id)` is not structured, even if it logs an ID.
+- A JSON log encoder (`LogstashEncoder`) or `logging.structured.format.*` without a trace/correlation ID doesn't count.
+- Setting log levels (`logging.level...`) doesn't count.
+- `log.info("owner " + id)` doesn't count, even if it logs an ID.
 
 ---
 
@@ -248,21 +273,23 @@ It uses Spring's default `base.xml`: plain text, no IDs.
 
 **What it is:** the app defines its own named metrics for business operations.
 
-**Counts as TC:**
-- `@Timed("name")` or `@Counted("name")` on a class or method.
-- `meterRegistry.counter(...)`, `Timer.builder(...)`, `Gauge.builder(...)`.
+**Counts as TC** (confirmed by owner):
+- `@Timed` or `@Counted` on a class or method.
+- `MeterRegistry` counter, timer or gauge calls: `meterRegistry.counter(...)`, `.timer(...)`, `.gauge(...)`,
+  or `Counter.builder(...)`, `Timer.builder(...)`, `Gauge.builder(...)`.
 
-**Matching unit:** `line_range` (needs owner confirmation).
+**Matching unit:** `line_range` (confirmed by owner).
 The range covers the annotation line, or the one statement that creates the meter.
 
 **Positive example:** customers-service `.../customers/web/OwnerResource.java` line 41: `@Timed("petclinic.owner")`.
 Also `.../customers/web/PetResource.java` line 37 and visits-service `.../visits/web/VisitResource.java` line 45.
+Label each one.
 
-**Negative example:** customers-service `.../customers/config/MetricConfig.java` lines 13-16.
-It adds a common tag to all metrics but defines no new metric.
+**Negative example:** customers-service `pom.xml` lines 78-81 (`micrometer-registry-prometheus`), `is_tc: false`.
+The Prometheus registry dependency alone only exports metrics. It defines no metric of its own.
 
 **Edge cases:**
-- The `micrometer-registry-prometheus` dependency only exports default metrics. Not custom.
+- `MetricConfig.java` lines 13-16 (`.../customers/config/`) add a common tag to all metrics but define no new metric.
 - The `TimedAspect` bean (`MetricConfig.java` lines 18-21) only makes `@Timed` work. Don't label it on its own.
 
 ---
@@ -305,7 +332,8 @@ It has `@RequestMapping("/owners")` on line 39: no spec file, no version.
 - A DTO with Lombok `@Value`.
 - A DTO with `@JsonIgnoreProperties(ignoreUnknown = true)`.
 
-**Matching unit:** `file` (needs owner confirmation). One label per DTO file.
+**Matching unit:** `file` (confirmed by owner). One label per DTO file.
+`line_start` and `line_end` are `null`.
 
 **Positive example:** api-gateway `.../api/dto/OwnerDetails.java`.
 Line 25: `public record OwnerDetails(`.

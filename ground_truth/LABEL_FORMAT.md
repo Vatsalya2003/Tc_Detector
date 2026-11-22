@@ -75,18 +75,18 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
 
 ## Examples
 
-### `line_range`: one labeller
+### `service`: one labeller
 
 ```json
 {
-  "label_id": "spring-petclinic-microservices:customers-service:pom.xml:47-50:distributed-tracing",
+  "label_id": "spring-petclinic-microservices:customers-service:-:service:distributed-tracing",
   "repo": "spring-petclinic-microservices",
   "commit": "TODO-pin-sha",
   "service": "customers-service",
-  "file": "pom.xml",
-  "line_start": 47,
-  "line_end": 50,
-  "unit": "line_range",
+  "file": null,
+  "line_start": null,
+  "line_end": null,
+  "unit": "service",
   "pattern": "distributed-tracing",
   "category": "observability",
   "is_tc": true,
@@ -94,7 +94,7 @@ The code only checks that a pattern is kebab-case, not that it is on this list.
   "second_labeller": null,
   "second_is_tc": null,
   "adjudicated_by": null,
-  "notes": "Tracing enabled via the zipkin starter dependency; pending Vatsalya's confirmation that a dependency alone counts."
+  "notes": "Tracing enabled via the zipkin starter dependency (pom.xml lines 47-50)"
 }
 ```
 
