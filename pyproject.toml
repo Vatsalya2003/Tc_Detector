@@ -23,6 +23,7 @@ dependencies = [
 tc-detect = "tc_detector.cli:main"
 tc-attribute = "tc_detector.llm.cli:main"
 tc-rules-resilience = "tc_detector.rules.resilience.cli:main"
+tc-rules-observability = "tc_detector.rules.observability.cli:main"
 
 # How the package gets built and installed (uv's own build tool).
 [build-system]
