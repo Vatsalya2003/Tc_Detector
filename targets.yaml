@@ -22,11 +22,12 @@ targets:
     commit: 323993ce2519c6d02df63e08bf4458d123d3b611  # 2026-05-02
     role: dev-config
 
+  # held-out test set: do not run rules or tune on this until the rule freeze
   # Abhi's CS6510 checkout system. Latest main commit, 2026-11-03 (Week 6, event-driven).
   # The repo holds week1-monolith .. week6-events side by side; only week6-events is
   # scanned, so services from different weeks don't mix.
   - name: cs6510-checkout-microservices
     url: https://github.com/stalwartquintessence/CS6510-2026
-    commit: 241caa78568f1fb19056b85d318adfd07f8326b0  # 2026-11-03
+    commit: "241caa78568f1fb19056b85d318adfd07f8326b0"  # 2026-11-03 UTC
     path: week6-events
     role: test
