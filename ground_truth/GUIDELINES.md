@@ -96,7 +96,7 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
   Example: `src/main/resources/application.yml`.
   (Defined in `checks.py` and LABEL_FORMAT.md.)
 - `service`: written as in the contract tests, e.g. `api-gateway`, `customers-service`, `config-server`.
-- **Agreed by A and C; waiting on B:** use `spring.application.name` from the service's `application.yml`.
+- **Agreed by everyone:** use `spring.application.name` from the service's `application.yml`.
   So `spring-petclinic-api-gateway/` becomes `api-gateway`.
   If no name is set, fall back to the folder name minus the prefix all service folders share.
   So `spring-petclinic-config-server/` becomes `config-server`.
