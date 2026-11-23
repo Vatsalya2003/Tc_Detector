@@ -26,8 +26,7 @@ SCHEMA_PATH = Path(__file__).parents[2] / "schemas" / "candidate.schema.json"
 # ---------------------------------------------------------------------------
 
 TRACING_FILE = (
-    "src/main/java/org/springframework/samples/petclinic/"
-    "customers/web/OwnerResource.java"
+    "src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java"
 )
 
 # line_range: a tracing annotation on specific lines.

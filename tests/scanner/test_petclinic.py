@@ -56,9 +56,18 @@ def test_names_match_the_contracts_stand_in(inv):
 
 
 def test_every_labelled_file_is_in_the_inventory(inv):
+    """Every labelled service exists, and every labelled file is in that service's inventory."""
+    names = {s.name for s in inv.services}
     for label in load_labels(LABELS):
+        # Every label must point at a real service.
+        assert label.service in names, label.service
+        # Service-unit labels (e.g. distributed-tracing) have no file to check.
+        if label.file is None:
+            continue
         service = next(s for s in inv.services if s.name == label.service)
-        assert label.file in service.files["java"], label.file
+        # A labelled file can be in any group (java, config, logging, ...), not only java.
+        all_files = [f for group in service.files.values() for f in group]
+        assert label.file in all_files, label.file
 
 
 def test_root_pom_and_docker_compose_are_repo_files(inv):
