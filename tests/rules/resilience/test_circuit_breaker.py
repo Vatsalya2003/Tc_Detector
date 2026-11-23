@@ -298,8 +298,8 @@ def test_detect_on_a_mini_repo(tmp_path):
     cands = detect(tmp_path, repo_name="shop", commit="abc1234")
     assert all(isinstance(c, Candidate) for c in cands)
     assert sorted(c.id for c in cands) == [
-        "shop:gateway:src/main/java/x/Gateway.java:12-15:circuit-breaker",
-        "shop:orders:src/main/resources/application.yml:2-9:circuit-breaker",
+        "shop:gateway:src/main/java/x/Gateway.java:12-15:circuit-breaker-retry",
+        "shop:orders:src/main/resources/application.yml:2-9:circuit-breaker-retry",
     ]
     c = next(c for c in cands if c.service == "gateway")
     assert c.file == "src/main/java/x/Gateway.java"  # relative to the service root
