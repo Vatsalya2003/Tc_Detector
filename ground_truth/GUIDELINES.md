@@ -96,7 +96,7 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
   Example: `src/main/resources/application.yml`.
   (Defined in `checks.py` and LABEL_FORMAT.md.)
 - `service`: written as in the contract tests, e.g. `api-gateway`, `customers-service`, `config-server`.
-- **Agreed by A; waiting on B and C:** use `spring.application.name` from the service's `application.yml`.
+- **Agreed by A and C; waiting on B:** use `spring.application.name` from the service's `application.yml`.
   So `spring-petclinic-api-gateway/` becomes `api-gateway`.
   If no name is set, fall back to the folder name minus the prefix all service folders share.
   So `spring-petclinic-config-server/` becomes `config-server`.
@@ -137,9 +137,9 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 | `versioned-api` | api-stability | B | file |
 | `immutable-data-contracts` | api-stability | B | file (confirmed by owner) |
 | `event-schema-versioning` | modularity | B | file |
-| `circuit-breaker-retry` | automation | C | line_range |
-| `health-checks` | automation | C | service (needs owner confirmation) |
-| `saga` | modularity | C | service (needs owner confirmation) |
+| `circuit-breaker-retry` | automation | C | line_range (confirmed by owner) |
+| `health-checks` | automation | C | service (confirmed by owner) |
+| `saga` | modularity | C | service (confirmed by owner) |
 
 In the PetClinic paths below, `.../` stands for `src/main/java/org/springframework/samples/petclinic/`.
 In the label itself, always write the full path.
@@ -412,6 +412,9 @@ public class VisitCreated { public int petId; public String note; }
 
 ## `circuit-breaker-retry`
 
+**Slug** (confirmed by owner): write exactly `circuit-breaker-retry` in `pattern`, in labels and candidates.
+Not `circuit-breaker` or `circuit-breaker-and-retry`, or nothing will match.
+
 **What it is:** calls to another service stop or retry automatically when that service fails.
 
 **Counts as TC:**
@@ -419,7 +422,7 @@ public class VisitCreated { public int petId; public String note; }
 - `cbFactory.create(...).run(..., fallback)`, `@CircuitBreaker`, `@Retry`, `@Retryable`.
 - A Resilience4j config bean.
 
-**Matching unit:** `line_range`.
+**Matching unit:** `line_range` (confirmed by owner).
 The range covers the whole filter/config block, or the lines from `create` to `run`.
 
 **Positive examples (api-gateway):**
@@ -451,7 +454,8 @@ It fails fast but doesn't retry or open a breaker.
 - A custom `HealthIndicator`.
 - Kubernetes liveness/readiness probes inside the service folder.
 
-**Matching unit:** `service` (needs owner confirmation). One label per service.
+**Matching unit:** `service` (confirmed by owner). One label per service.
+A working `/actuator/health` is a property of the whole service, not of one file or line.
 
 **Positive example:** service `customers-service`.
 Evidence: `pom.xml` lines 25-28 (`spring-boot-starter-actuator`).
@@ -474,8 +478,10 @@ No actuator dependency. The root `docker-compose.yml` curls its root URL, but th
 - Event handlers that undo earlier steps (choreography).
 - Saga libraries (Axon, Eventuate, Temporal workflows).
 
-**Matching unit:** `service` (needs owner confirmation).
-Label the service that coordinates the saga.
+**Matching unit:** `service` (confirmed by owner).
+One saga is always exactly one label:
+- **Orchestration:** label the service that coordinates the saga.
+- **Choreography** (no coordinator; services react to each other's events): label the service that starts the saga.
 
 **Positive example (synthetic):** PetClinic has none.
 
@@ -490,6 +496,8 @@ catch (ChargeFailed e) { visits.cancel(petId, slot); }  // compensation
 **Edge cases:**
 - A single local `@Transactional` is not a saga.
 - Calls to several services without an undo step are not a saga.
+- Choreography saga: the services that only react to events and compensate get no label of their own.
+  Only the service that publishes the first event gets one label.
 
 ---
 
