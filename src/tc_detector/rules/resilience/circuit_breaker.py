@@ -1,6 +1,6 @@
 """S11: circuit breaker and retry detection. Owner: Neil (C).
 
-Pattern `circuit-breaker`, spec category `automation`, matching unit `line_range`.
+Pattern `circuit-breaker-retry`, spec category `automation`, matching unit `line_range`.
 
 What counts as one candidate (one unit):
 
@@ -48,7 +48,7 @@ from tc_detector.rules.resilience.common import (
     merge_hits,
 )
 
-PATTERN = "circuit-breaker"
+PATTERN = "circuit-breaker-retry"
 CATEGORY = Category.AUTOMATION
 
 RESILIENCE_IMPORTS = (
