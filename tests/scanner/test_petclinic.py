@@ -1,4 +1,4 @@
-"""The scanner on the real PetClinic checkout (skipped if it isn't cloned next to this repo).
+"""The scanner on the real PetClinic checkout (skipped only if it isn't cloned anywhere).
 
 Never point these tests at the held-out repo: it is scored once, after Dec 1.
 """
@@ -11,8 +11,14 @@ from tc_detector.contracts.label import load_labels
 from tc_detector.rules.contracts.common import find_services
 from tc_detector.scanner import scan
 
-PETCLINIC = Path(__file__).parents[3] / "spring-petclinic-microservices"
-LABELS = Path(__file__).parents[2] / "ground_truth" / "petclinic.json"
+REPO_ROOT = Path(__file__).parents[2]
+# Where scripts/clone_targets.py puts it first, then a checkout next to this repo.
+PLACES = [
+    REPO_ROOT / "targets" / "spring-petclinic-microservices",
+    REPO_ROOT.parent / "spring-petclinic-microservices",
+]
+PETCLINIC = next((p for p in PLACES if p.is_dir()), None)
+LABELS = REPO_ROOT / "ground_truth" / "petclinic.json"
 NAMES = [
     "admin-server",
     "api-gateway",
@@ -24,7 +30,9 @@ NAMES = [
     "visits-service",
 ]
 
-pytestmark = pytest.mark.skipif(not PETCLINIC.is_dir(), reason="PetClinic not cloned")
+pytestmark = pytest.mark.skipif(
+    PETCLINIC is None, reason="PetClinic not cloned (run scripts/clone_targets.py)"
+)
 
 
 @pytest.fixture(scope="module")
@@ -48,9 +56,18 @@ def test_names_match_the_contracts_stand_in(inv):
 
 
 def test_every_labelled_file_is_in_the_inventory(inv):
+    """Every labelled service exists, and every labelled file is in that service's inventory."""
+    names = {s.name for s in inv.services}
     for label in load_labels(LABELS):
+        # Every label must point at a real service.
+        assert label.service in names, label.service
+        # Service-unit labels (e.g. distributed-tracing) have no file to check.
+        if label.file is None:
+            continue
         service = next(s for s in inv.services if s.name == label.service)
-        assert label.file in service.files["java"], label.file
+        # A labelled file can be in any group (java, config, logging, ...), not only java.
+        all_files = [f for group in service.files.values() for f in group]
+        assert label.file in all_files, label.file
 
 
 def test_root_pom_and_docker_compose_are_repo_files(inv):
