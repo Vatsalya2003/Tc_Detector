@@ -175,6 +175,43 @@ def test_package_named_test_under_src_main_is_kept(tmp_path):
     ]
 
 
+def test_packages_named_build_out_or_target_are_kept(tmp_path):
+    shop_repo(tmp_path)
+    for rel in ("build/Builder.java", "out/Outbox.java", "target/Targeting.java"):
+        write(tmp_path, f"shop-orders/src/main/java/com/acme/{rel}")
+    java = by_name(scan(tmp_path, "shop", COMMIT))["orders-service"].files["java"]
+    assert "src/main/java/com/acme/build/Builder.java" in java
+    assert "src/main/java/com/acme/out/Outbox.java" in java
+    assert "src/main/java/com/acme/target/Targeting.java" in java
+
+
+def test_build_output_next_to_a_build_file_or_in_the_root_is_skipped(tmp_path):
+    shop_repo(tmp_path)
+    write(tmp_path, "shop-orders/target/x.java")  # next to shop-orders/pom.xml
+    write(tmp_path, "shop-payments/build/x.java")
+    write(tmp_path, "shop-payments/out/x.java")
+    write(tmp_path, "build/x")  # in the scanned root
+    write(tmp_path, "out/x")
+    inv = scan(tmp_path, "shop", COMMIT)
+    assert inv.repo_files == ["README.md", "docker-compose.yml", "pom.xml"]
+    assert all(f.startswith("src/main/") for s in inv.services for f in s.files["java"])
+
+
+def test_build_folder_below_a_plain_root_folder_is_kept(tmp_path):
+    shop_repo(tmp_path)
+    write(tmp_path, "docs/build/index.html")  # docs/ has no build file
+    assert "docs/build/index.html" in scan(tmp_path, "shop", COMMIT).repo_files
+
+
+def test_tool_folders_are_skipped_at_any_depth(tmp_path):
+    shop_repo(tmp_path)
+    write(tmp_path, "shop-orders/src/main/resources/static/node_modules/lib/x.yml")
+    write(tmp_path, "shop-orders/src/main/java/com/acme/.idea/A.java")
+    listed = scan(tmp_path, "shop", COMMIT).to_json()
+    assert "node_modules" not in listed
+    assert ".idea" not in listed
+
+
 # ------------------------------------------------------------------ targets and commits
 
 
