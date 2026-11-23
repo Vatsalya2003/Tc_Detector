@@ -2,12 +2,12 @@
 
 ## In one sentence each
 
-- **Circuit breaker and retry** (`circuit-breaker`, automation): a service wraps
+- **Circuit breaker and retry** (`circuit-breaker-retry`, automation): a service wraps
   its calls to another service so that failed calls are retried a few times and,
   if that service keeps failing, calls stop and a fallback answer is served
   instead, which means one slow or broken service can't take its callers down
   with it, and the credit pays off whenever that dependency goes down.
-- **Health checks** (`health-check`, automation): each service reports whether
+- **Health checks** (`health-checks`, automation): each service reports whether
   it is alive and ready for traffic, so the platform can restart it or route
   around it automatically, and the credit pays off at every crash and every
   rolling deploy that needs no human.
