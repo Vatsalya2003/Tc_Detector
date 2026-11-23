@@ -26,7 +26,7 @@ def candidate() -> dict[str, Any]:
         line_start=6,
         line_end=7,
         unit="line_range",
-        pattern="circuit-breaker",
+        pattern="circuit-breaker-retry",
         category="automation",
         rule_id="automation-cb-annotation-01",
         snippet='@CircuitBreaker(name = "payments")\npublic Result charge(Order o) {',

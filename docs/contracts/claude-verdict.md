@@ -8,7 +8,7 @@ changing a field needs agreement from all four.
 
 ```json
 {
-  "candidate_id": "demo-shop:orders:src/main/java/shop/orders/PaymentClient.java:6-14:circuit-breaker",
+  "candidate_id": "demo-shop:orders:src/main/java/shop/orders/PaymentClient.java:6-14:circuit-breaker-retry",
   "is_tc": true,
   "tc_confidence": 4,
   "tc_category": "automation",
@@ -83,11 +83,8 @@ MADR export (stretch) is a template over these fields.
 
 ## Open questions for the team
 
-1. Pattern slugs: I propose `circuit-breaker`, `health-check`, `saga` for mine.
-   Can we fix all 12 slugs today alongside the candidate format?
-2. `repo` value: `Candidate` comments say `petclinic`, the label format proposes the
-   `targets.yaml` name (`spring-petclinic-microservices`). My rules default to the
-   targets.yaml name; candidates and labels must use the same string or nothing matches.
-3. Default model `claude-sonnet-5-5` (current Sonnet; the spec's `claude-sonnet-4-6`
+Pattern slugs and the `repo` value are settled in `ground_truth/GUIDELINES.md`.
+
+1. Default model `claude-sonnet-5-5` (current Sonnet; the spec's `claude-sonnet-4-6`
    is the previous generation and costs more) and `claude-haiku-5-5` as the
    "smaller" model for Experiment 3?
