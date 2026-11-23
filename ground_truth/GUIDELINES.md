@@ -38,11 +38,42 @@ A = Vatsalya, B = Abhi, C = Neil, D = Karan.
 
 ### Agreement sample
 
-- Draw a random 20% of units.
-- Use a fixed seed, and write the seed in the change log below, so anyone can redraw the same sample.
-- For each unit in the sample, the second labeller marks each pattern present or absent.
+- Draw a random 20% of each pattern's labels, rounded up, so a pattern with one label still gets it checked.
+- The seed is fixed in advance: **2026**. Always draw with it.
+  Anyone can then redraw the same sample to check it, and nobody can redraw until they like the result.
+- For each label in the sample, the second labeller judges that pattern at that place: present or absent.
 - The second labeller must not see the primary's answers first.
 - Disagreements: see "Second labeller and disagreements" in LABEL_FORMAT.md.
+
+Run it with `eval/agreement.py`, from the repo root, once the primary labels are frozen:
+
+1. Draw the sample. This writes a worksheet with no answers on it:
+
+   ```sh
+   uv run python -m tc_detector.eval.agreement sample --labels ground_truth/petclinic.json \
+       --seed 2026 --out ground_truth/petclinic-agreement.json
+   ```
+
+2. Second labellers: find the rows with your letter in `second_labeller`.
+   Set `second_is_tc` to `true` or `false` on each one.
+   Don't open `petclinic.json` until you're done.
+3. Copy the answers into the label file.
+   If an answer disagrees with the primary's, this lists it and writes nothing.
+   Settle it, fill in `adjudicated_by` and `final_is_tc` on that row, and run it again.
+
+   ```sh
+   uv run python -m tc_detector.eval.agreement merge --labels ground_truth/petclinic.json \
+       --worksheet ground_truth/petclinic-agreement.json
+   ```
+
+4. Print agreement and Cohen's kappa:
+
+   ```sh
+   uv run python -m tc_detector.eval.agreement kappa --labels ground_truth/petclinic.json
+   ```
+
+   Most labels are `is_tc: true`, so kappa is often `n/a` or near 0 even when agreement is high.
+   Report both numbers.
 
 ### Where labels go
 
@@ -472,7 +503,7 @@ catch (ChargeFailed e) { visits.cancel(petId, slot); }  // compensation
 
 ## Change log
 
-Record the sample seed here, and every change after a freeze.
+Record every change after a freeze here.
 
 | Date | label_id | Change | Reason | Who |
 |---|---|---|---|---|
