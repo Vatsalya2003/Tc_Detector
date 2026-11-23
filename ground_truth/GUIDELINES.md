@@ -134,9 +134,9 @@ uv run python -c "from tc_detector.contracts.label import load_labels; load_labe
 | `distributed-tracing` | observability | A | service (confirmed by owner) |
 | `structured-logging` | observability | A | file (confirmed by owner) |
 | `custom-metrics` | observability | A | line_range (confirmed by owner) |
-| `versioned-api` | api-stability | B | file |
+| `versioned-api` | api-stability | B | file (confirmed by owner) |
 | `immutable-data-contracts` | api-stability | B | file (confirmed by owner) |
-| `event-schema-versioning` | modularity | B | file |
+| `event-schema-versioning` | modularity | B | file (confirmed by owner) |
 | `circuit-breaker-retry` | automation | C | line_range (confirmed by owner) |
 | `health-checks` | automation | C | service (confirmed by owner) |
 | `saga` | modularity | C | service (confirmed by owner) |
@@ -333,7 +333,7 @@ The Prometheus registry dependency alone only exports metrics. It defines no met
 - An OpenAPI/Swagger file (`openapi.yaml`, `swagger.json`) with `info.version` and/or `/v1/` paths.
 - A `.proto` file with a versioned package (`package petclinic.v1;`).
 
-**Matching unit:** `file`. The spec file.
+**Matching unit:** `file` (confirmed by owner). The spec file.
 
 **Positive example (synthetic):** PetClinic has no spec files.
 
@@ -389,7 +389,7 @@ A JPA `@Entity` (line 37) with setters (from line 123). Mutable, and a database 
 - New fields have defaults (Avro) or new field numbers (proto).
 - A schema registry or a version in the name/namespace.
 
-**Matching unit:** `file`. The schema file.
+**Matching unit:** `file` (confirmed by owner). The schema file.
 
 **Positive example (synthetic):** PetClinic has no events.
 
