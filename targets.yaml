@@ -22,7 +22,7 @@ targets:
     commit: 323993ce2519c6d02df63e08bf4458d123d3b611  # 2026-05-02
     role: dev-config
 
-  # held-out test set: do not run rules or tune on this until the rule freeze
+  # held-out test set: never tune rules on it; scored once, after Dec 1
   # Abhi's CS6510 checkout system. Latest main commit, 2026-11-03 (Week 6, event-driven).
   # The repo holds week1-monolith .. week6-events side by side; only week6-events is
   # scanned, so services from different weeks don't mix.
