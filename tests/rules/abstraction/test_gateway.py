@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 from tc_detector.contracts.candidate import SNIPPET_MAX_CHARS, Candidate, Category, Unit
-from tc_detector.rules.abstraction.gateway import RULE_ID, detect, find_services, name_words
+from tc_detector.rules.abstraction.gateway import RULE_ID, detect, filter_name, name_words
+from tc_detector.scanner import scan
 
 COMMIT = "0" * 40
 RES = "src/main/resources"
@@ -209,21 +210,19 @@ def test_zuul_routes_config(tmp_path):
     assert list(run(repo)) == ["router"]
 
 
-def test_bff_that_calls_several_services(tmp_path):
+def test_calls_are_supporting_evidence_on_a_gateway(tmp_path):
     repo = write(
         tmp_path,
         {
             **BACKENDS,
-            "web/pom.xml": pom("spring-boot-starter-webflux"),
-            f"web/{RES}/application.yml": app_name("web-bff"),
-            f"web/{JAVA}/Clients.java": TWO_CALLS,
+            "gw/pom.xml": pom("spring-cloud-starter-gateway"),
+            f"gw/{RES}/application.yml": SCG_ROUTES,
+            f"gw/{JAVA}/Clients.java": TWO_CALLS,
         },
     )
-    found = run(repo)
-    assert list(found) == ["web-bff"]
-    snippet = found["web-bff"].snippet
-    assert "weak: calls 2 other services: customers-service" in snippet
-    assert "weak: service name word(s): bff" in snippet
+    snippet = run(repo)["api-gateway"].snippet
+    assert "supporting: calls 2 other services: customers-service (" in snippet
+    assert "orders-service (src/main/java/x/Clients.java:4)" in snippet
 
 
 def test_name_plus_dependency_is_enough(tmp_path):
@@ -327,18 +326,115 @@ def test_name_words(name, words):
     assert name_words(name) == words
 
 
-def test_name_with_only_one_call_is_not_enough(tmp_path):
-    one_call = 'package x;\nclass C { String u = "http://customers-service/owners"; }\n'
+def test_name_plus_calls_without_dependency_is_not_enough(tmp_path):
+    """The removed path: a BFF/adapter name plus calls to 2+ services, but no routes.
+
+    The guideline defines a gateway by routing; it doesn't support flagging an
+    anti-corruption layer or BFF by its name and the calls it makes.
+    """
     repo = write(
         tmp_path,
         {
             **BACKENDS,
-            "gw/pom.xml": pom("spring-boot-starter-webflux"),
-            f"gw/{RES}/application.yml": app_name("api-gateway"),
-            f"gw/{JAVA}/C.java": one_call,
+            "web/pom.xml": pom("spring-boot-starter-webflux"),
+            f"web/{RES}/application.yml": app_name("web-bff"),
+            f"web/{JAVA}/Clients.java": TWO_CALLS,
         },
     )
     assert run(repo) == {}
+
+
+def test_adapter_name_plus_calls_without_dependency_is_not_enough(tmp_path):
+    repo = write(
+        tmp_path,
+        {
+            **BACKENDS,
+            "pay/pom.xml": pom("spring-boot-starter-web"),
+            f"pay/{RES}/application.yml": app_name("payment-adapter"),
+            f"pay/{JAVA}/Clients.java": TWO_CALLS,
+        },
+    )
+    assert run(repo) == {}
+
+
+# ------------------------------------------------------- filters (supporting only)
+
+PETCLINIC_FILTERS = """\
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - name: CircuitBreaker
+              args:
+                name: defaultCircuitBreaker
+            - name: Retry
+              args:
+                retries: 1
+          routes:
+            - id: vets
+              uri: lb://customers-service
+              filters:
+                - StripPrefix=2
+            - id: orders
+              uri: lb://orders-service
+"""
+
+
+def test_filters_are_supporting_evidence_in_yaml(tmp_path):
+    repo = write(
+        tmp_path,
+        {**BACKENDS, "gw/pom.xml": pom(), f"gw/{RES}/application.yml": PETCLINIC_FILTERS},
+    )
+    snippet = run(repo)["api-gateway"].snippet
+    assert (
+        f"supporting: default filters at {RES}/application.yml:8-14 -> CircuitBreaker, Retry"
+        in (snippet)
+    )
+    assert f"supporting: route filters at {RES}/application.yml:18-19 -> StripPrefix" in snippet
+    assert "strong: gateway routes at" in snippet
+
+
+def test_filters_are_supporting_evidence_in_properties(tmp_path):
+    props = """\
+    spring.application.name=router
+    spring.cloud.gateway.default-filters[0]=Retry=3
+    spring.cloud.gateway.default-filters[1].name=CircuitBreaker
+    spring.cloud.gateway.routes[0].uri=lb://customers-service
+    spring.cloud.gateway.routes[0].filters[0]=StripPrefix=1
+    """
+    repo = write(
+        tmp_path, {**BACKENDS, "r/pom.xml": pom(), f"r/{RES}/application.properties": props}
+    )
+    snippet = run(repo)["router"].snippet
+    assert "supporting: default filters at src/main/resources/application.properties:2-3" in (
+        snippet
+    )
+    assert "-> Retry, CircuitBreaker" in snippet
+    assert "supporting: route filters at src/main/resources/application.properties:5-5" in snippet
+
+
+def test_filters_alone_are_not_a_signal(tmp_path):
+    yml = app_name("shop") + (
+        "  cloud:\n    gateway:\n      default-filters:\n        - name: Retry\n"
+        "      routes:\n        - id: x\n          filters:\n            - StripPrefix=1\n"
+    )
+    repo = write(tmp_path, {**BACKENDS, "s/pom.xml": pom(), f"s/{RES}/application.yml": yml})
+    assert run(repo) == {}
+
+
+@pytest.mark.parametrize(
+    ("yml", "name"),
+    [("- StripPrefix=2", "StripPrefix"), ("- name: Retry", "Retry"), ("- Dedupe", "Dedupe")],
+)
+def test_filter_name(yml, name):
+    import yaml
+
+    (item,) = yaml.compose(yml).value
+    assert filter_name(item) == name
 
 
 def test_test_code_is_ignored(tmp_path):
@@ -357,12 +453,15 @@ def test_test_code_is_ignored(tmp_path):
 # ------------------------------------------------------------- output format
 
 
+AGGREGATOR_POM = "<project>\n<modules>\n<module>a</module>\n</modules>\n</project>\n"
+
+
 def petclinic_like(tmp_path: Path) -> Path:
     """Folders share a prefix; config-server has no spring.application.name."""
     return write(
         tmp_path,
         {
-            "pom.xml": pom(),
+            "pom.xml": AGGREGATOR_POM,  # a parent pom, like PetClinic's: not a service
             **plain_service("spring-petclinic-customers-service", "customers-service"),
             **plain_service("spring-petclinic-orders-service", "orders-service"),
             **plain_service("spring-petclinic-config-server"),
@@ -376,8 +475,7 @@ def petclinic_like(tmp_path: Path) -> Path:
 
 
 def test_service_names_follow_the_convention(tmp_path):
-    repo = petclinic_like(tmp_path)
-    names = {s.root.name: s.name for s in find_services(repo)}
+    names = {s.root: s.name for s in scan(petclinic_like(tmp_path), "demo", COMMIT).services}
     assert names == {
         "spring-petclinic-api-gateway": "api-gateway",  # spring.application.name
         "spring-petclinic-config-server": "config-server",  # folder minus shared prefix
@@ -387,9 +485,68 @@ def test_service_names_follow_the_convention(tmp_path):
     }
 
 
+# --------------------------------------- service names come from the scanner
+
+
+def scanner_names(repo: Path) -> set[str]:
+    return {s.name for s in scan(repo, "demo", COMMIT).services}
+
+
+def gateway_routes_service(folder: str) -> dict[str, str]:
+    """A gateway with routes and no spring.application.name: named from its folder."""
+    yml = "spring:\n  cloud:\n    gateway:\n      routes:\n        - id: a\n          uri: lb://a\n"
+    return {f"{folder}/pom.xml": pom(), f"{folder}/{RES}/application.yml": yml}
+
+
+def test_nested_parent_pom_is_not_a_service(tmp_path):
+    """A parent pom in a subfolder only groups modules; the shared prefix still applies."""
+    repo = write(
+        tmp_path,
+        {
+            "services/pom.xml": AGGREGATOR_POM,
+            **gateway_routes_service("services/shop-gateway"),
+            **plain_service("services/shop-orders"),
+        },
+    )
+    assert scanner_names(repo) == {"gateway", "orders"}
+    assert [c.service for c in detect(repo, "demo", COMMIT)] == ["gateway"]
+
+
+def test_service_under_a_tests_folder_is_found(tmp_path):
+    repo = write(
+        tmp_path,
+        {**plain_service("shop-orders"), **gateway_routes_service("tests/shop-gateway")},
+    )
+    assert scanner_names(repo) == {"gateway", "orders"}
+    assert [c.service for c in detect(repo, "demo", COMMIT)] == ["gateway"]
+
+
+def test_java_route_in_a_build_package_is_read(tmp_path):
+    """`com/acme/build/` is a Java package, not build output, so its routes count."""
+    repo = write(
+        tmp_path,
+        {
+            **BACKENDS,
+            "routing/pom.xml": pom(),
+            f"routing/{RES}/application.yml": app_name("routing-service"),
+            "routing/src/main/java/com/acme/build/Routes.java": ROUTE_LOCATOR_BEAN,
+        },
+    )
+    found = run(repo)
+    assert list(found) == ["routing-service"]
+    assert "strong: gateway routes (Java RouteLocator bean) at src/main/java/com/acme/build/" in (
+        found["routing-service"].snippet
+    )
+
+
+def test_candidate_names_are_the_scanners(tmp_path):
+    repo = petclinic_like(tmp_path)
+    assert {c.service for c in detect(repo, "demo", COMMIT)} <= scanner_names(repo)
+
+
 def test_candidates_pass_the_candidate_checks(tmp_path):
     candidates = detect(petclinic_like(tmp_path), "demo", COMMIT)
-    assert sorted(c.service for c in candidates) == ["api-gateway", "web-bff"]
+    assert sorted(c.service for c in candidates) == ["api-gateway"]  # web-bff: name + calls only
     for c in candidates:
         assert Candidate.from_dict(c.to_dict()) == c  # re-runs every check in checks.py
         assert c.unit == Unit.SERVICE
