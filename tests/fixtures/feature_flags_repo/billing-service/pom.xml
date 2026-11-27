@@ -1,0 +1,13 @@
+<project>
+  <artifactId>billing-service</artifactId>
+  <dependencies>
+    <dependency>
+      <groupId>io.getunleash</groupId>
+      <artifactId>unleash-client-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.launchdarkly</groupId>
+      <artifactId>launchdarkly-java-server-sdk</artifactId>
+    </dependency>
+  </dependencies>
+</project>

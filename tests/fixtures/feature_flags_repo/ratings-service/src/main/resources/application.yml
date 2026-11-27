@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: ratings-service
+  profiles:
+    active: production
+  ai:
+    chat:
+      client:
+        enabled: true
+petclinic:
+  features:
+    vet-ratings: true
+ratings:
+  show-stars: true
+  timeout-ms: 500
