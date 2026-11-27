@@ -1,0 +1,10 @@
+## PetClinic, rules only
+externalised-config                7     7     0          7      7       1.00    1.00
+gateway                            1     1     0          1      1       1.00    1.00
+## PetClinic, rules + Claude (haiku, v2)
+externalised-config                7     7     0          7      7       1.00    1.00
+gateway                            1     1     0          1      1       1.00    1.00
+## Fixture, rules only
+feature-flags           8     8     0          8      8       1.00    1.00
+## Fixture, rules + Claude (haiku, v2)
+feature-flags           8     8     0          8      8       1.00    1.00
